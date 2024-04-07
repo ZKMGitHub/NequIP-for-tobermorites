@@ -1,0 +1,33 @@
+
+units	metal
+atom_style atomic
+boundary    p p p
+newton off
+#neighbor 1.0 bin
+neigh_modify delay 0 every 1 check yes
+#neigh_modify once no every 1 delay 0 check yes
+
+box tilt large
+read_data tob9_ref_deepmd.data
+
+pair_style	nequip
+pair_coeff	* * tob9_l3-deployed.pth Ca H O Si
+mass            1 40.079800
+mass            4 28.08500
+mass            3 15.9994
+mass            2 1.00794
+
+
+#kspace_style    ewald 1.0e-6 
+
+velocity all create 300 4928459 rot yes dist gaussian #温度初始化
+timestep 0.001
+
+thermo 1
+#thermo_style  custom step temp press etotal lx ly lz xy xz yz pxx pyy pzz
+
+min_style cg
+minimize 1.0e-15 1.0e-15 100000 100000
+
+
+write_dump all custom output-tob9_nequip.dump id type x y z fx fy fz

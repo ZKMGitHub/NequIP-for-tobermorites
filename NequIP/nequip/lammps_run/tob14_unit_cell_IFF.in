@@ -1,0 +1,81 @@
+units real
+dimension 3
+boundary p p p
+neighbor 2.0 bin
+neigh_modify every 1 delay 0 check yes
+newton off
+
+atom_style atomic
+timestep 1
+
+#dihedral_style harmonic
+
+special_bonds lj/coul 0.0 0.0 1.0
+atom_modify sort 0 0.0
+
+#kspace_style ewald 1.0e-6
+
+box tilt large
+read_data Tob14_unit_cell_IFF.data #读取水化硅酸钙模型data文件
+
+pair_style nequip
+pair_coeff * * ../tob14-deployed.pth Ca Si O H
+mass 1 40.079800
+mass 2 28.085500 # sc2
+mass 3 15.999400
+mass 4 1.007970
+
+
+#thermo 100 #设置每多少步输出一次
+#thermo_style  custom step temp press epair ebond eangle edihed pxx pyy pzz lx ly lz #设置输出哪些变量
+
+min_style cg
+minimize 1.0e-15 1.0e-15 100000 100000 #设置能量最小化
+
+velocity all create 300.0 4928459 rot yes dist gaussian #温度初始化
+
+thermo 100
+thermo_style custom step temp press pxx pyy pzz lx ly lz
+
+fix 1 all npt temp 300.0 300.0 10.0 iso 0.0 0.0 1000.0
+
+
+run 5000 #运行步数
+
+
+#dump输出设置
+unfix 1 
+reset_timestep 0
+timestep 1
+
+variable tmp equal "lx"
+variable Lx0 equal ${tmp}
+variable tmp equal "ly"
+variable Ly0 equal ${tmp}
+variable tmp equal "lz"
+variable Lz0 equal ${tmp}
+variable strainz equal "-(lz - v_Lz0)/v_Lz0"
+variable stressz equal "pzz * 101325/1000000000"
+
+
+print "========================================="
+print "Lx0=$(v_Lx0) Ly0=$(v_Ly0) Lz0=$(v_Lz0)"
+print "========================================="
+
+#dump输出
+dump 1 all custom 100 dump.pp id type x y z vx vy vz
+
+#设置npt系综
+fix    1 all npt temp 300.0 300.0 100.0 x 0.0 0.0 1000.0 y 0.0 0.0 1000.0
+
+#deform拉伸，z方向
+fix    2 all deform 1 z erate -0.00008 remap x units box
+
+#热力学输出
+thermo_style  custom step temp press v_strainz v_stressz pxx pyy pzz lx ly lz
+thermo          100
+reset_timestep  0
+fix 3 all print 100 "$(v_strainz) $(v_stressz) " file strainz_stressz_tob14_unit.txt screen no
+
+#启动模拟，20万步
+run    10000
