@@ -1,0 +1,36 @@
+
+units	metal
+dimension 3
+atom_style atomic
+boundary        p p p
+neighbor 2.0 bin
+neigh_modify delay 5 every 1
+#newton off
+
+
+box tilt large
+read_data tob9_ref_deepmd.data
+
+pair_style	deepmd tob9_deepmd_compress.pb
+pair_coeff	* * Ca H O Si
+mass            1 40.079800
+mass            4 28.08500
+mass            3 15.9994
+mass            2 1.00794
+
+#special_bonds lj/coul 0.0 0.0 1.0
+#atom_modify sort 0 0.0
+
+
+
+timestep 0.001
+
+thermo 1
+#thermo_style  custom step temp etotal cella cellb cellc cellalpha cellbeta cellgamma pxx pyy pzz
+#thermo_style  custom step temp press etotal lx ly lz xy yz xz pxx pyy pzz
+
+velocity all create 300 4928459 rot yes dist gaussian #温度初始化
+min_style cg
+minimize 1.0e-15 1.0e-15 100000 100000
+
+write_dump all custom output-tob9_deepmd.dump id type x y z fx fy fz
